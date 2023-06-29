@@ -49,15 +49,52 @@ def generate_frames():
         # Process the image with MediaPipe
         results = hands.process(image)
 
-        if total_count == 1:
-            start_time = time.time()
-
         # Check if any hands are detected
         if results.multi_hand_landmarks:
             for hand_landmarks in results.multi_hand_landmarks:
+                # Initialize finger states
+                finger_states = {
+                    "thumb": False,
+                    "index": False,
+                    "middle": False,
+                    "ring": False,
+                    "pinky": False
+                }
+
+                # Check if thumb is extended
+                if hand_landmarks.landmark[mp_hands.HandLandmark.THUMB_TIP].x < hand_landmarks.landmark[
+                    mp_hands.HandLandmark.THUMB_IP].x:
+                    finger_states["thumb"] = True
+
+                # Check if index finger is extended
+                if hand_landmarks.landmark[mp_hands.HandLandmark.INDEX_FINGER_TIP].y < hand_landmarks.landmark[
+                    mp_hands.HandLandmark.INDEX_FINGER_PIP].y:
+                    finger_states["index"] = True
+
+                # Check if middle finger is extended
+                if hand_landmarks.landmark[mp_hands.HandLandmark.MIDDLE_FINGER_TIP].y < hand_landmarks.landmark[
+                    mp_hands.HandLandmark.MIDDLE_FINGER_PIP].y:
+                    finger_states["middle"] = True
+
+                # Check if ring finger is extended
+                if hand_landmarks.landmark[mp_hands.HandLandmark.RING_FINGER_TIP].y < hand_landmarks.landmark[
+                    mp_hands.HandLandmark.RING_FINGER_PIP].y:
+                    finger_states["ring"] = True
+
+                # Check if pinky finger is extended
+                if hand_landmarks.landmark[mp_hands.HandLandmark.PINKY_TIP].y < hand_landmarks.landmark[
+                    mp_hands.HandLandmark.PINKY_PIP].y:
+                    finger_states["pinky"] = True
+
+                # Check if hand is in a fist
+                if not any(finger_states.values()):
+                    cv2.putText(frame, "Fist: Yes", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 255), 2)
+                else:
+                    cv2.putText(frame, "Fist: No", (10, 150), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 255, 0), 2)
+
                 # Draw circles on landmarks 5, 9, 13, and 17
                 for i, landmark in enumerate(hand_landmarks.landmark):
-                    if i in [5, 9, 13, 17]:
+                    if i in [5, 7, 9, 11, 13, 15, 17]:
                         # Get the pixel coordinates of the landmark
                         x = int(landmark.x * frame.shape[1])
                         y = int(landmark.y * frame.shape[0])
@@ -68,24 +105,25 @@ def generate_frames():
                         # Check if the point touches the landmark
                         if abs(x - point_x) < 20 and abs(y - point_y) < 20:
                             # Increase the catch count
-                            catch_count += 1
-                            end_time = time.time()
+                            if not any(finger_states.values()):
+                                catch_count += 1
+                                end_time = time.time()
 
-                            elapsed_time = end_time - start_time
-                            if elapsed_time < temp_time:
-                                 temp_time = elapsed_time
+                                elapsed_time = end_time - start_time
+                                if elapsed_time < temp_time:
+                                    temp_time = elapsed_time
 
                             # Reset the point to a random x coordinate at the top of the frame
-                            point_x = random.randint(0, frame.shape[1])
-                            point_y = 0
+                                point_x = random.randint(0, frame.shape[1])
+                                point_y = 0
 
                             # Check if catch_count is a multiple of 7
-                            if catch_count % 7 == 0:
+                                if catch_count % 7 == 0:
                                 # Increase the move speed by 4
-                                move_speed_y += move_speed_increase
+                                    move_speed_y += move_speed_increase
 
         # Draw a large blue point
-        cv2.circle(frame, (point_x, point_y), 20, (255, 0, 0), -1)
+        cv2.circle(frame, (point_x, point_y), 20, (0, 255, 0), -1)
 
         # Check if the point reaches the bottom of the frame
         if point_y >= frame.shape[0]:
